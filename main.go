@@ -30,7 +30,7 @@ func main() {
 		}
 	}
 
-	f, err := os.Create("out.png")
+	f, err := os.Create("out/out.png")
 	if err != nil {
 		log.Fatal(err)
 	}
