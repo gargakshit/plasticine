@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	width  = 256 * 8
-	height = 256 * 8
+	width  = 1920
+	height = 1080
 )
 
 func main() {
@@ -34,10 +34,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	// skipcq: GO-S2307
 	defer f.Close()
 
 	err = png.Encode(f, img)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Error encoding the image to png:", err)
+		return
 	}
 }
