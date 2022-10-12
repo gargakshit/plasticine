@@ -4,7 +4,11 @@ import (
 	"image"
 	"image/png"
 	"log"
+	"math"
 	"os"
+	"runtime"
+	"sync"
+	"time"
 
 	"gonum.org/v1/gonum/spatial/r3"
 )
@@ -38,7 +42,41 @@ var (
 func main() {
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
 
-	for j := 0; j < height; j++ {
+	var wg sync.WaitGroup
+	numPartitions := runtime.GOMAXPROCS(0)
+	log.Println("Running in parallel with", numPartitions, "partitions")
+
+	partitionHeight := height / numPartitions
+	wg.Add(numPartitions)
+
+	timeStart := time.Now()
+	for i := 0; i < numPartitions; i++ {
+		go performRayTracing(img, &wg, i*partitionHeight, (i+1)*partitionHeight)
+	}
+
+	wg.Wait()
+
+	log.Println("Ray tracing took", time.Since(timeStart))
+
+	f, err := os.Create("out/out.png")
+	if err != nil {
+		log.Fatal(err)
+	}
+	// skipcq: GO-S2307
+	defer f.Close()
+
+	err = png.Encode(f, img)
+	if err != nil {
+		log.Println("Error encoding the image to png:", err)
+		return
+	}
+}
+
+func performRayTracing(
+	img *image.RGBA, wg *sync.WaitGroup,
+	startHeight, endHeight int,
+) {
+	for j := startHeight; j < endHeight; j++ {
 		for i := 0; i < width; i++ {
 			u := float64(i) / (width - 1)
 			v := float64(j) / (height - 1)
@@ -61,21 +99,29 @@ func main() {
 		}
 	}
 
-	f, err := os.Create("out/out.png")
-	if err != nil {
-		log.Fatal(err)
-	}
-	// skipcq: GO-S2307
-	defer f.Close()
+	wg.Done()
+}
 
-	err = png.Encode(f, img)
-	if err != nil {
-		log.Println("Error encoding the image to png:", err)
-		return
+func hitSphere(center r3.Vec, radius float64, r *Ray) float64 {
+	oc := r3.Sub(r.Origin, center)
+	a := Vec3Dot(r.Dir, r.Dir)
+	b := 2 * Vec3Dot(oc, r.Dir)
+	c := Vec3Dot(oc, oc) - radius*radius
+	discriminant := b*b - 4*a*c
+
+	if discriminant < 0 {
+		return -1
+	} else {
+		return (-b - math.Sqrt(discriminant)) / (2 * a)
 	}
 }
 
 func rayColor(r *Ray) r3.Vec {
+	if t := hitSphere(r3.Vec{Z: -1}, 0.5, r); t > 0 {
+		n := r3.Unit(r3.Sub(r.At(t), r3.Vec{Z: -1}))
+		return r3.Scale(0.5, r3.Vec{X: n.X + 1, Y: n.Y + 1, Z: n.Z + 1})
+	}
+
 	unitDir := r3.Unit(r.Dir)
 	fac := 0.5 * (unitDir.Y + 1.0)
 
