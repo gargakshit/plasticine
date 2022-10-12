@@ -1,4 +1,4 @@
-package main
+package ray
 
 import (
 	"gonum.org/v1/gonum/spatial/r3"
