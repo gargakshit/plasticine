@@ -43,3 +43,12 @@ func RandomUnitVec3() r3.Vec {
 		}
 	}
 }
+
+func RandomV3InHemisphere(nor r3.Vec) r3.Vec {
+	v := RandomUnitVec3()
+	if Vec3Dot(v, nor) > 0 {
+		return v
+	}
+
+	return r3.Scale(-1, v)
+}

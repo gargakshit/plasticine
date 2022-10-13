@@ -20,7 +20,7 @@ import (
 const (
 	width   = 480 * 3
 	height  = 270 * 3
-	samples = 360
+	samples = 128
 )
 
 var world = object.CreateWorld()
@@ -99,17 +99,17 @@ var infinity = math.Inf(1)
 
 const maxDepth = 50
 
-func rayColor(r *ray.Ray, hitRecord *object.HitRecord, depth int) r3.Vec {
+func rayColor(r *ray.Ray, hit *object.HitRecord, depth int) r3.Vec {
 	if depth > maxDepth {
 		return r3.Vec{}
 	}
 
-	if world.Hit(r, 0.0000000001, infinity, hitRecord) {
+	if world.Hit(r, 0.0000000001, infinity, hit) {
 		// NOTE(AG): might have problems related to mutability
-		target := r3.Add(r3.Add(hitRecord.Point, hitRecord.Normal), util.RandomUnitVec3())
+		target := r3.Add(hit.Normal, util.RandomV3InHemisphere(hit.Normal))
 		return r3.Scale(0.5, rayColor(
-			ray.NewRay(hitRecord.Point, r3.Sub(target, hitRecord.Point)),
-			hitRecord,
+			ray.NewRay(hit.Point, target),
+			hit,
 			depth+1,
 		))
 	}
