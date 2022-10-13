@@ -99,19 +99,20 @@ var infinity = math.Inf(1)
 
 const maxDepth = 50
 
-func rayColor(r *ray.Ray, hit *object.HitRecord, depth int) r3.Vec {
+func rayColor(r *ray.Ray, rec *object.HitRecord, depth int) r3.Vec {
 	if depth > maxDepth {
 		return r3.Vec{}
 	}
 
-	if world.Hit(r, 0.0000000001, infinity, hit) {
+	if world.Hit(r, 0.0000000001, infinity, rec) {
 		// NOTE(AG): might have problems related to mutability
-		target := r3.Add(hit.Normal, util.RandomV3InHemisphere(hit.Normal))
-		return r3.Scale(0.5, rayColor(
-			ray.NewRay(hit.Point, target),
-			hit,
-			depth+1,
-		))
+
+		hit, attenuation, scatter := rec.Mat.Scatter(r, rec)
+		if hit {
+			return r3.Cross(attenuation, rayColor(scatter, rec, depth+1))
+		}
+
+		return r3.Vec{}
 	}
 
 	unitDir := r3.Unit(r.Dir)

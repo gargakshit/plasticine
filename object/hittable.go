@@ -11,6 +11,7 @@ type HitRecord struct {
 	Normal    r3.Vec
 	T         float64
 	FrontFace bool
+	Mat       Material
 }
 
 func NewHitRecord() *HitRecord {
