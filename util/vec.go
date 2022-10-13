@@ -1,4 +1,4 @@
-package main
+package util
 
 import (
 	"gonum.org/v1/gonum/spatial/r3"

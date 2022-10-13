@@ -10,7 +10,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gargakshit/plasticine/objects"
 	"github.com/gargakshit/plasticine/ray"
+	"github.com/gargakshit/plasticine/util"
 	"gonum.org/v1/gonum/spatial/r3"
 )
 
@@ -50,9 +52,11 @@ func main() {
 	partitionHeight := height / numPartitions
 	wg.Add(numPartitions)
 
+	world := objects.CreateWorld()
+
 	timeStart := time.Now()
 	for i := 0; i < numPartitions; i++ {
-		go performRayTracing(img, &wg, i*partitionHeight, (i+1)*partitionHeight)
+		go performRayTracing(img, &wg, i*partitionHeight, (i+1)*partitionHeight, world)
 	}
 
 	wg.Wait()
@@ -75,12 +79,13 @@ func main() {
 func performRayTracing(
 	img *image.RGBA, wg *sync.WaitGroup,
 	startHeight, endHeight int,
+	world objects.Hittable,
 ) {
 	for j := startHeight; j < endHeight; j++ {
 		for i := 0; i < width; i++ {
 			u := float64(i) / (width - 1)
 			v := float64(j) / (height - 1)
-			ray := ray.NewRay(
+			r := ray.NewRay(
 				origin,
 				// lowerLeftCorner + u*horizontal + v*vertical - origin
 				r3.Sub(
@@ -95,37 +100,29 @@ func performRayTracing(
 				),
 			)
 
-			img.Set(i, height-j-1, VecToRGBA(rayColor(ray)))
+			color := rayColor(r, world)
+			img.Set(i, height-j-1, util.VecToRGBA(color))
 		}
 	}
 
 	wg.Done()
 }
 
-func hitSphere(center r3.Vec, radius float64, r *ray.Ray) float64 {
-	oc := r3.Sub(r.Origin, center)
-	a := Vec3Dot(r.Dir, r.Dir)
-	halfB := Vec3Dot(oc, r.Dir)
-	c := Vec3Dot(oc, oc) - radius*radius
-	discriminant := halfB*halfB - a*c
+var (
+	infinity = math.Inf(1)
+)
 
-	if discriminant < 0 {
-		return -1
-	} else {
-		return (-halfB - math.Sqrt(discriminant)) / a
-	}
-}
-
-func rayColor(r *ray.Ray) r3.Vec {
-	if t := hitSphere(r3.Vec{Z: -1}, 0.5, r); t > 0 {
-		n := r3.Unit(r3.Sub(r.At(t), r3.Vec{Z: -1}))
-		return r3.Scale(0.5, r3.Vec{X: n.X + 1, Y: n.Y + 1, Z: n.Z + 1})
+func rayColor(r *ray.Ray, world objects.Hittable) r3.Vec {
+	hitRecord := objects.NewHitRecord()
+	if world.Hit(r, 0, infinity, hitRecord) {
+		// (normal + (1, 1, 1)) / 2
+		return r3.Scale(0.5, r3.Add(hitRecord.Normal, r3.Vec{X: 1, Y: 1, Z: 1}))
 	}
 
 	unitDir := r3.Unit(r.Dir)
 	fac := 0.5 * (unitDir.Y + 1.0)
 
-	return Lerp(
+	return util.Lerp(
 		fac,
 		r3.Vec{X: 1.0, Y: 1.0, Z: 1.0},
 		r3.Vec{X: 0.5, Y: 0.7, Z: 1.0},
