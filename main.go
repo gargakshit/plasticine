@@ -23,9 +23,7 @@ const (
 	samples = 128 * 2
 )
 
-var (
-	world = object.CreateWorld()
-)
+var world = object.CreateWorld()
 
 func main() {
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
