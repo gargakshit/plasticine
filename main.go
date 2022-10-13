@@ -108,9 +108,7 @@ func performRayTracing(
 	wg.Done()
 }
 
-var (
-	infinity = math.Inf(1)
-)
+var infinity = math.Inf(1)
 
 func rayColor(r *ray.Ray, world objects.Hittable) r3.Vec {
 	hitRecord := objects.NewHitRecord()
