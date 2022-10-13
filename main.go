@@ -20,7 +20,7 @@ import (
 const (
 	width   = 480 * 3
 	height  = 270 * 3
-	samples = 128
+	samples = 64
 )
 
 var world = object.CreateWorld()
@@ -48,12 +48,13 @@ func main() {
 		go performRayTracing(&wg, i*partitionHeight, (i+1)*partitionHeight, cam)
 	}
 
-	wg.Wait()
 	// Compute the last partition if there are still scanlines left
 	if (numPartitions*1)*partitionHeight < height {
 		wg.Add(1)
-		performRayTracing(&wg, (numPartitions*1)*partitionHeight, height, cam)
+		go performRayTracing(&wg, (numPartitions*1)*partitionHeight, height, cam)
 	}
+
+	wg.Wait()
 
 	log.Println("Ray tracing took", time.Since(timeStart))
 
@@ -92,7 +93,7 @@ func performRayTracing(
 
 var infinity = math.Inf(1)
 
-const maxDepth = 50
+const maxDepth = 48
 
 func rayColor(r ray.Ray, depth int) r3.Vec {
 	if depth > maxDepth {
@@ -100,11 +101,9 @@ func rayColor(r ray.Ray, depth int) r3.Vec {
 	}
 
 	if h, rec := world.Hit(r, 0.0000000001, infinity); h {
-		// NOTE(AG): might have problems related to mutability
-
 		hit, attenuation, scatter := rec.Mat.Scatter(r, rec)
 		if hit {
-			return r3.Cross(attenuation, rayColor(scatter, depth+1))
+			return util.Vec3Mul(attenuation, rayColor(scatter, depth+1))
 		}
 
 		return r3.Vec{}

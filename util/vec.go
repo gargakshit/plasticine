@@ -11,6 +11,14 @@ func Vec3Dot(v1, v2 r3.Vec) float64 {
 	return v1.X*v2.X + v1.Y*v2.Y + v1.Z*v2.Z
 }
 
+func Vec3Mul(v1, v2 r3.Vec) r3.Vec {
+	return r3.Vec{
+		X: v1.X * v2.X,
+		Y: v1.Y * v2.Y,
+		Z: v1.Z * v2.Z,
+	}
+}
+
 func Vec3LengthSquared(v r3.Vec) float64 {
 	return Vec3Dot(v, v)
 }
