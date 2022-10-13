@@ -3,6 +3,7 @@ package camera
 import (
 	"image"
 
+	"github.com/gargakshit/plasticine/object"
 	"github.com/gargakshit/plasticine/ray"
 	"github.com/gargakshit/plasticine/util"
 	"gonum.org/v1/gonum/spatial/r3"
@@ -13,7 +14,7 @@ const (
 	viewportHeight = 2.0
 )
 
-type RayColor func(*ray.Ray) r3.Vec
+type RayColor func(*ray.Ray, *object.HitRecord) r3.Vec
 
 type Camera struct {
 	origin     r3.Vec
@@ -55,20 +56,16 @@ func NewCamera(samples, width, height int, img *image.RGBA) *Camera {
 	}
 }
 
-func (c *Camera) getRay(u, v float64) *ray.Ray {
-	return ray.NewRay(
-		c.origin,
-		// lowerLeftCorner + u*horizontal + v*vertical - origin
-		r3.Sub(
+func (c *Camera) getRayDirection(u, v float64) r3.Vec {
+	return r3.Sub(
+		r3.Add(
+			c.lowerLeft,
 			r3.Add(
-				c.lowerLeft,
-				r3.Add(
-					r3.Scale(u, c.horizontal),
-					r3.Scale(v, c.vertical),
-				),
+				r3.Scale(u, c.horizontal),
+				r3.Scale(v, c.vertical),
 			),
-			c.origin,
 		),
+		c.origin,
 	)
 }
 
@@ -78,15 +75,16 @@ func (c *Camera) writePixel(x, y int, color r3.Vec) {
 	c.img.SetRGBA(x, c.height-y-1, util.VecToRGBA(color))
 }
 
-func (c *Camera) Sample(x, y int, rayColor RayColor) {
+func (c *Camera) Sample(x, y int, r *ray.Ray, hr *object.HitRecord, rayColor RayColor) {
 	col := r3.Vec{}
 
+	r.Origin = c.origin
 	for i := 0; i < c.samples; i++ {
 		u := (float64(x) + util.RealRand()) / float64(c.width)
 		v := (float64(y) + util.RealRand()) / float64(c.height)
-		r := c.getRay(u, v)
+		r.Dir = c.getRayDirection(u, v)
 
-		col = r3.Add(col, rayColor(r))
+		col = r3.Add(col, rayColor(r, hr))
 	}
 
 	c.writePixel(x, y, col)

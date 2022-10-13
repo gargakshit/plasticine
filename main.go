@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"image/png"
 	"log"
@@ -20,7 +21,7 @@ import (
 const (
 	width   = 1920
 	height  = 1080
-	samples = 128 * 2
+	samples = 64
 )
 
 var world = object.CreateWorld()
@@ -57,6 +58,10 @@ func main() {
 		log.Println("Error encoding the image to png:", err)
 		return
 	}
+
+	s := &runtime.MemStats{}
+	runtime.ReadMemStats(s)
+	fmt.Println("Allocs:", s.Alloc, "NumGC:", s.NumGC)
 }
 
 func performRayTracing(
@@ -64,9 +69,12 @@ func performRayTracing(
 	startHeight, endHeight int,
 	cam *camera.Camera,
 ) {
+	r := &ray.Ray{}
+	hr := object.NewHitRecord()
+
 	for y := startHeight; y < endHeight; y++ {
 		for x := 0; x < width; x++ {
-			cam.Sample(x, y, rayColor)
+			cam.Sample(x, y, r, hr, rayColor)
 		}
 	}
 
@@ -75,8 +83,7 @@ func performRayTracing(
 
 var infinity = math.Inf(1)
 
-func rayColor(r *ray.Ray) r3.Vec {
-	hitRecord := object.NewHitRecord()
+func rayColor(r *ray.Ray, hitRecord *object.HitRecord) r3.Vec {
 	if world.Hit(r, 0, infinity, hitRecord) {
 		// (normal + (1, 1, 1)) / 2
 		return r3.Scale(0.5, r3.Add(hitRecord.Normal, r3.Vec{X: 1, Y: 1, Z: 1}))

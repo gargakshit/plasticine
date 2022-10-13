@@ -12,3 +12,7 @@ const (
 func RealRand() float64 {
 	return float64(fastrand.Uint32()) / uint32MaxF64
 }
+
+func RealRandRange(min, max float64) float64 {
+	return min + (max-min)*RealRand()
+}
