@@ -2,6 +2,7 @@ package camera
 
 import (
 	"image"
+	"math"
 
 	"github.com/gargakshit/plasticine/object"
 	"github.com/gargakshit/plasticine/ray"
@@ -14,7 +15,7 @@ const (
 	viewportHeight = 2.0
 )
 
-type RayColor func(*ray.Ray, *object.HitRecord) r3.Vec
+type RayColor func(*ray.Ray, *object.HitRecord, int) r3.Vec
 
 type Camera struct {
 	origin     r3.Vec
@@ -71,20 +72,24 @@ func (c *Camera) getRayDirection(u, v float64) r3.Vec {
 
 func (c *Camera) writePixel(x, y int, color r3.Vec) {
 	scale := 1.0 / float64(c.samples)
-	color = r3.Scale(scale, color)
+	color = r3.Vec{
+		X: math.Sqrt(scale * color.X),
+		Y: math.Sqrt(scale * color.Y),
+		Z: math.Sqrt(scale * color.Z),
+	}
 	c.img.SetRGBA(x, c.height-y-1, util.VecToRGBA(color))
 }
 
 func (c *Camera) Sample(x, y int, r *ray.Ray, hr *object.HitRecord, rayColor RayColor) {
 	col := r3.Vec{}
 
-	r.Origin = c.origin
 	for i := 0; i < c.samples; i++ {
 		u := (float64(x) + util.RealRand()) / float64(c.width)
 		v := (float64(y) + util.RealRand()) / float64(c.height)
+		r.Origin = c.origin
 		r.Dir = c.getRayDirection(u, v)
 
-		col = r3.Add(col, rayColor(r, hr))
+		col = r3.Add(col, rayColor(r, hr, 0))
 	}
 
 	c.writePixel(x, y, col)

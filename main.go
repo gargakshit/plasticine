@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"image"
 	"image/png"
 	"log"
@@ -19,9 +18,9 @@ import (
 )
 
 const (
-	width   = 1920
-	height  = 1080
-	samples = 64
+	width   = 480 * 3
+	height  = 270 * 3
+	samples = 360
 )
 
 var world = object.CreateWorld()
@@ -31,7 +30,13 @@ func main() {
 
 	var wg sync.WaitGroup
 	numPartitions := runtime.GOMAXPROCS(0)
-	log.Println("Running in parallel with", numPartitions, "partitions with", samples, "samples")
+
+	log.Println("Width:", width)
+	log.Println("Height:", height)
+	log.Println("Parallel: true")
+	log.Println("Partitions:", numPartitions)
+	log.Println("Samples:", samples)
+	log.Println("Light bounces:", maxDepth)
 
 	partitionHeight := height / numPartitions
 	wg.Add(numPartitions)
@@ -43,7 +48,15 @@ func main() {
 		go performRayTracing(&wg, i*partitionHeight, (i+1)*partitionHeight, cam)
 	}
 
+	// Compute the last partition if there are still scanlines left
+	if (numPartitions*1)*partitionHeight < height {
+		wg.Add(1)
+		log.Println("Extra partition required")
+		go performRayTracing(&wg, (numPartitions*1)*partitionHeight, height, cam)
+	}
+
 	wg.Wait()
+
 	log.Println("Ray tracing took", time.Since(timeStart))
 
 	f, err := os.Create("out/out.png")
@@ -61,7 +74,8 @@ func main() {
 
 	s := &runtime.MemStats{}
 	runtime.ReadMemStats(s)
-	fmt.Println("Allocs:", s.Alloc, "NumGC:", s.NumGC)
+	log.Println("Allocs:", s.Alloc)
+	log.Println("NumGC:", s.NumGC)
 }
 
 func performRayTracing(
@@ -83,10 +97,21 @@ func performRayTracing(
 
 var infinity = math.Inf(1)
 
-func rayColor(r *ray.Ray, hitRecord *object.HitRecord) r3.Vec {
-	if world.Hit(r, 0, infinity, hitRecord) {
-		// (normal + (1, 1, 1)) / 2
-		return r3.Scale(0.5, r3.Add(hitRecord.Normal, r3.Vec{X: 1, Y: 1, Z: 1}))
+const maxDepth = 50
+
+func rayColor(r *ray.Ray, hitRecord *object.HitRecord, depth int) r3.Vec {
+	if depth > maxDepth {
+		return r3.Vec{}
+	}
+
+	if world.Hit(r, 0.0000000001, infinity, hitRecord) {
+		// NOTE(AG): might have problems related to mutability
+		target := r3.Add(r3.Add(hitRecord.Point, hitRecord.Normal), util.RandomUnitVec3())
+		return r3.Scale(0.5, rayColor(
+			ray.NewRay(hitRecord.Point, r3.Sub(target, hitRecord.Point)),
+			hitRecord,
+			depth+1,
+		))
 	}
 
 	unitDir := r3.Unit(r.Dir)
