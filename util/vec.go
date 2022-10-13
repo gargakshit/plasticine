@@ -60,3 +60,14 @@ func RandomV3InHemisphere(nor r3.Vec) r3.Vec {
 
 	return r3.Scale(-1, v)
 }
+
+func RandomVec3Disk() r3.Vec {
+	for {
+		p := r3.Vec{X: RealRandRange(-1, 1), Y: RealRandRange(-1, 2)}
+		if Vec3LengthSquared(p) >= 1 {
+			continue
+		}
+
+		return p
+	}
+}

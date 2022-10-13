@@ -41,7 +41,16 @@ func main() {
 	partitionHeight := height / numPartitions
 	wg.Add(numPartitions)
 
-	cam := camera.NewCamera(samples, width, height, img)
+	lookFrom := r3.Vec{X: 3, Y: 3, Z: 3}
+	lookAt := r3.Vec{Z: -1}
+	vUp := r3.Vec{Y: 1}
+	focusDist := util.Vec3Length(r3.Sub(lookFrom, lookAt))
+	cam := camera.NewCamera(
+		samples, width, height,
+		20, lookFrom, lookAt, vUp,
+		0, focusDist,
+		img,
+	)
 
 	timeStart := time.Now()
 	for i := 0; i < numPartitions; i++ {
