@@ -10,6 +10,6 @@ type Material interface {
 	Scatter(r ray.Ray, rec HitRecord) (bool, r3.Vec, ray.Ray)
 }
 
-func Reflect(v, n r3.Vec) r3.Vec {
+func reflect(v, n r3.Vec) r3.Vec {
 	return r3.Sub(v, r3.Scale(2*util.Vec3Dot(v, n), n))
 }
