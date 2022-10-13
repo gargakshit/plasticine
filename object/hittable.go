@@ -1,4 +1,4 @@
-package objects
+package object
 
 import (
 	"github.com/gargakshit/plasticine/ray"

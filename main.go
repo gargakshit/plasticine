@@ -10,36 +10,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gargakshit/plasticine/objects"
+	"github.com/gargakshit/plasticine/camera"
+	"github.com/gargakshit/plasticine/object"
 	"github.com/gargakshit/plasticine/ray"
 	"github.com/gargakshit/plasticine/util"
 	"gonum.org/v1/gonum/spatial/r3"
 )
 
 const (
-	width  = 1920
-	height = 1080
-	// Camera
-	aspectRatio    = float64(width) / float64(height)
-	viewportHeight = 2.0
-	viewportWidth  = viewportHeight * aspectRatio
-	focalLength    = 1.0
+	width   = 1920
+	height  = 1080
+	samples = 128 * 2
 )
 
 var (
-	// Camera
-	origin     = r3.Vec{}
-	horizontal = r3.Vec{X: viewportWidth}
-	vertical   = r3.Vec{Y: viewportHeight}
-	focal      = r3.Vec{Z: focalLength}
-	// origin - horizontal/2 - vertical/2 - vec(0, 0, focalLength)
-	lowerLeftCorner = r3.Sub(
-		r3.Sub(
-			r3.Sub(origin, r3.Scale(0.5, horizontal)),
-			r3.Scale(0.5, vertical),
-		),
-		focal,
-	)
+	world = object.CreateWorld()
 )
 
 func main() {
@@ -47,16 +32,16 @@ func main() {
 
 	var wg sync.WaitGroup
 	numPartitions := runtime.GOMAXPROCS(0)
-	log.Println("Running in parallel with", numPartitions, "partitions")
+	log.Println("Running in parallel with", numPartitions, "partitions with", samples, "samples")
 
 	partitionHeight := height / numPartitions
 	wg.Add(numPartitions)
 
-	world := objects.CreateWorld()
+	cam := camera.NewCamera(samples, width, height, img)
 
 	timeStart := time.Now()
 	for i := 0; i < numPartitions; i++ {
-		go performRayTracing(img, &wg, i*partitionHeight, (i+1)*partitionHeight, world)
+		go performRayTracing(&wg, i*partitionHeight, (i+1)*partitionHeight, cam)
 	}
 
 	wg.Wait()
@@ -77,31 +62,13 @@ func main() {
 }
 
 func performRayTracing(
-	img *image.RGBA, wg *sync.WaitGroup,
+	wg *sync.WaitGroup,
 	startHeight, endHeight int,
-	world objects.Hittable,
+	cam *camera.Camera,
 ) {
-	for j := startHeight; j < endHeight; j++ {
-		for i := 0; i < width; i++ {
-			u := float64(i) / (width - 1)
-			v := float64(j) / (height - 1)
-			r := ray.NewRay(
-				origin,
-				// lowerLeftCorner + u*horizontal + v*vertical - origin
-				r3.Sub(
-					r3.Add(
-						lowerLeftCorner,
-						r3.Add(
-							r3.Scale(u, horizontal),
-							r3.Scale(v, vertical),
-						),
-					),
-					origin,
-				),
-			)
-
-			color := rayColor(r, world)
-			img.Set(i, height-j-1, util.VecToRGBA(color))
+	for y := startHeight; y < endHeight; y++ {
+		for x := 0; x < width; x++ {
+			cam.Sample(x, y, rayColor)
 		}
 	}
 
@@ -110,8 +77,8 @@ func performRayTracing(
 
 var infinity = math.Inf(1)
 
-func rayColor(r *ray.Ray, world objects.Hittable) r3.Vec {
-	hitRecord := objects.NewHitRecord()
+func rayColor(r *ray.Ray) r3.Vec {
+	hitRecord := object.NewHitRecord()
 	if world.Hit(r, 0, infinity, hitRecord) {
 		// (normal + (1, 1, 1)) / 2
 		return r3.Scale(0.5, r3.Add(hitRecord.Normal, r3.Vec{X: 1, Y: 1, Z: 1}))
