@@ -20,20 +20,16 @@ func (h *HitList) Clear() {
 	h.Objects = h.Objects[:0]
 }
 
-func (h *HitList) Hit(r *ray.Ray, tMin, tMax float64, rec *HitRecord) bool {
-	tmpRec := NewHitRecord()
+func (h *HitList) Hit(r ray.Ray, tMin, tMax float64) (bool, HitRecord) {
+	var rec HitRecord
 	hit := false
-	closest := tMax
 
 	for _, obj := range h.Objects {
-		if obj.Hit(r, tMin, tMax, tmpRec) {
+		if h, hr := obj.Hit(r, tMin, tMax); h {
 			hit = true
-			closest = tmpRec.T
-			*rec = *tmpRec
+			rec = hr
 		}
 	}
 
-	_ = closest
-
-	return hit
+	return hit, rec
 }

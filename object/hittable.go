@@ -14,11 +14,11 @@ type HitRecord struct {
 	Mat       Material
 }
 
-func NewHitRecord() *HitRecord {
-	return &HitRecord{}
+func NewHitRecord() HitRecord {
+	return HitRecord{}
 }
 
-func (h *HitRecord) SetFaceNormal(r *ray.Ray, outwardNormal r3.Vec) {
+func (h *HitRecord) SetFaceNormal(r ray.Ray, outwardNormal r3.Vec) {
 	h.FrontFace = util.Vec3Dot(r.Dir, outwardNormal) < 0
 	if h.FrontFace {
 		h.Normal = outwardNormal
@@ -28,5 +28,5 @@ func (h *HitRecord) SetFaceNormal(r *ray.Ray, outwardNormal r3.Vec) {
 }
 
 type Hittable interface {
-	Hit(r *ray.Ray, tMin, tMax float64, rec *HitRecord) bool
+	Hit(r ray.Ray, tMin, tMax float64) (bool, HitRecord)
 }

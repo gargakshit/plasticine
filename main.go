@@ -48,14 +48,12 @@ func main() {
 		go performRayTracing(&wg, i*partitionHeight, (i+1)*partitionHeight, cam)
 	}
 
+	wg.Wait()
 	// Compute the last partition if there are still scanlines left
 	if (numPartitions*1)*partitionHeight < height {
 		wg.Add(1)
-		log.Println("Extra partition required")
-		go performRayTracing(&wg, (numPartitions*1)*partitionHeight, height, cam)
+		performRayTracing(&wg, (numPartitions*1)*partitionHeight, height, cam)
 	}
-
-	wg.Wait()
 
 	log.Println("Ray tracing took", time.Since(timeStart))
 
@@ -83,12 +81,9 @@ func performRayTracing(
 	startHeight, endHeight int,
 	cam *camera.Camera,
 ) {
-	r := &ray.Ray{}
-	hr := object.NewHitRecord()
-
 	for y := startHeight; y < endHeight; y++ {
 		for x := 0; x < width; x++ {
-			cam.Sample(x, y, r, hr, rayColor)
+			cam.Sample(x, y, rayColor)
 		}
 	}
 
@@ -99,17 +94,17 @@ var infinity = math.Inf(1)
 
 const maxDepth = 50
 
-func rayColor(r *ray.Ray, rec *object.HitRecord, depth int) r3.Vec {
+func rayColor(r ray.Ray, depth int) r3.Vec {
 	if depth > maxDepth {
 		return r3.Vec{}
 	}
 
-	if world.Hit(r, 0.0000000001, infinity, rec) {
+	if h, rec := world.Hit(r, 0.0000000001, infinity); h {
 		// NOTE(AG): might have problems related to mutability
 
 		hit, attenuation, scatter := rec.Mat.Scatter(r, rec)
 		if hit {
-			return r3.Cross(attenuation, rayColor(scatter, rec, depth+1))
+			return r3.Cross(attenuation, rayColor(scatter, depth+1))
 		}
 
 		return r3.Vec{}

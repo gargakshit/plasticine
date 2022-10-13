@@ -9,8 +9,8 @@ type Ray struct {
 	Dir    r3.Vec
 }
 
-func NewRay(origin r3.Vec, dir r3.Vec) *Ray {
-	return &Ray{Origin: origin, Dir: dir}
+func NewRay(origin r3.Vec, dir r3.Vec) Ray {
+	return Ray{Origin: origin, Dir: dir}
 }
 
 func (r *Ray) At(t float64) r3.Vec {
