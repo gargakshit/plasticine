@@ -1,9 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"image/png"
-	"log"
 	"math"
 	"os"
 	"runtime"
@@ -31,12 +31,12 @@ func main() {
 	var wg sync.WaitGroup
 	numPartitions := runtime.GOMAXPROCS(0)
 
-	log.Println("Width:", width)
-	log.Println("Height:", height)
-	log.Println("Parallel: true")
-	log.Println("Partitions:", numPartitions)
-	log.Println("Samples:", samples)
-	log.Println("Light bounces:", maxDepth)
+	fmt.Println("Width:", width)
+	fmt.Println("Height:", height)
+	fmt.Println("Parallel: true")
+	fmt.Println("Partitions:", numPartitions)
+	fmt.Println("Samples:", samples)
+	fmt.Println("Light bounces:", maxDepth)
 
 	partitionHeight := height / numPartitions
 	wg.Add(numPartitions)
@@ -48,7 +48,7 @@ func main() {
 	cam := camera.NewCamera(
 		samples, width, height,
 		20, lookFrom, lookAt, vUp,
-		0, focusDist,
+		2, focusDist,
 		img,
 	)
 
@@ -65,25 +65,26 @@ func main() {
 
 	wg.Wait()
 
-	log.Println("Ray tracing took", time.Since(timeStart))
+	fmt.Println("Ray tracing took", time.Since(timeStart))
 
 	f, err := os.Create("out/out.png")
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Error:", err)
+		os.Exit(1)
 	}
 	// skipcq: GO-S2307
 	defer f.Close()
 
 	err = png.Encode(f, img)
 	if err != nil {
-		log.Println("Error encoding the image to png:", err)
-		return
+		fmt.Println("Error:", err)
+		os.Exit(1)
 	}
 
 	s := &runtime.MemStats{}
 	runtime.ReadMemStats(s)
-	log.Println("Allocs:", s.Alloc)
-	log.Println("NumGC:", s.NumGC)
+	fmt.Println("Allocs:", s.Alloc)
+	fmt.Println("NumGC:", s.NumGC)
 }
 
 func performRayTracing(
