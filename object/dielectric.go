@@ -18,6 +18,8 @@ func NewDielectric(indexOfRefraction float64) *Dielectric {
 
 func (d *Dielectric) Scatter(r ray.Ray, rec HitRecord) (bool, r3.Vec, ray.Ray) {
 	// TODO(AG): Fix dielectric materials
+	attenuation := r3.Vec{X: 1, Y: 1, Z: 1}
+
 	refractionRatio := d.IndexOfRefraction
 	if rec.FrontFace {
 		refractionRatio = 1 / refractionRatio
@@ -29,17 +31,17 @@ func (d *Dielectric) Scatter(r ray.Ray, rec HitRecord) (bool, r3.Vec, ray.Ray) {
 
 	cannotRefract := refractionRatio*sinTheta > 1
 
-	var dir r3.Vec
 	if cannotRefract || reflectance(cosTheta, refractionRatio) > util.RealRand() {
-		dir = reflect(unitDir, rec.Normal)
-	} else {
-		dir = refract(cosTheta, unitDir, rec.Normal, refractionRatio)
+		return true, attenuation,
+			ray.NewRay(rec.Point, reflect(unitDir, rec.Normal))
 	}
 
-	return true, r3.Vec{X: 1, Y: 1, Z: 1}, ray.NewRay(rec.Point, dir)
+	return true, attenuation,
+		ray.NewRay(rec.Point, refract(unitDir, rec.Normal, refractionRatio))
 }
 
-func refract(cosTheta float64, uv, n r3.Vec, etaIOverEtaN float64) r3.Vec {
+func refract(uv, n r3.Vec, etaIOverEtaN float64) r3.Vec {
+	cosTheta := math.Min(util.Vec3Dot(r3.Scale(-1, uv), n), 1)
 	rPerpendicular := r3.Scale(etaIOverEtaN, r3.Add(uv, r3.Scale(cosTheta, n)))
 	rParallel := r3.Scale(-math.Sqrt(1-util.Vec3LengthSquared(rPerpendicular)), n)
 
