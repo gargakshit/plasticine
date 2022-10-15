@@ -77,8 +77,8 @@ func main() {
 
 	err = png.Encode(f, img)
 	if err != nil {
-		fmt.Println("Error:", err)
-		os.Exit(1)
+		fmt.Println("Error encoding to PNG:", err)
+		return
 	}
 
 	s := &runtime.MemStats{}
